@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter un livre - TestVault{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus-circle"></i> Ajouter un nouveau livre
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="titre" class="form-label">
+                            <i class="fas fa-book"></i> Titre du livre *
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="titre" 
+                            name="titre" 
+                            placeholder="Entrez le titre du livre"
+                            required
+                            maxlength="255"
+                        >
+                        <div class="form-text">
+                            Maximum 255 caractères
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Ajouter le livre
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-lightbulb text-warning"></i> Suggestion
+                </h6>
+                <p class="card-text small mb-0">
+                    Vous pouvez ajouter des livres célèbres comme "Le Comte de Monte-Cristo", 
+                    "Les Trois Mousquetaires", ou "Notre-Dame de Paris".
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
