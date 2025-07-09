@@ -1,89 +1,259 @@
 {% extends "base.html" %}
+{% block title %}Accueil - TestVault{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-book-open"></i> Liste des Livres</h1>
-            <a href="{{ url_for('main.add_book') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Ajouter un livre
-            </a>
+<div class="container mt-4">
+    {% if is_authenticated %}
+    <!-- Authenticated User Dashboard -->
+    <div class="row">
+        <div class="col-12">
+            <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+                <h1 class="display-4">
+                    Bienvenue, {{ username }}! 
+                    <i class="fas fa-wave-hand ms-2"></i>
+                </h1>
+                <p class="lead">
+                    Votre plateforme sécurisée TestVault est prête à l'emploi.
+                </p>
+                {% if not totp_verified and not requires_totp %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>Sécurité recommandée:</strong> 
+                    Activez l'authentification à deux facteurs pour une sécurité renforcée.
+                    <a href="{{ url_for('auth.totp_setup') }}" class="btn btn-warning btn-sm ms-2">
+                        Configurer maintenant
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-book fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Gestion des Livres</h5>
+                    <p class="card-text">Consultez et gérez votre collection de livres</p>
+                    <a href="{{ url_for('main.books') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right me-2"></i>Accéder
+                    </a>
+                </div>
+            </div>
         </div>
 
-        {% if books %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-server fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Statut Vault</h5>
+                    <p class="card-text">Vérifiez la connectivité et l'état des services</p>
+                    <a href="{{ url_for('main.vault_status') }}" class="btn btn-success">
+                        <i class="fas fa-arrow-right me-2"></i>Vérifier
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-cog fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Mon Profil</h5>
+                    <p class="card-text">Gérez vos paramètres et sécurité</p>
+                    <a href="{{ url_for('auth.profile') }}" class="btn btn-info">
+                        <i class="fas fa-arrow-right me-2"></i>Configurer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Status Overview -->
+    <div class="row mt-4">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Livres disponibles ({{ books|length }})</h5>
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>État de la Sécurité
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Titre</th>
-                                    <th>Date d'ajout</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for book in books %}
-                                <tr>
-                                    <td>{{ book.id }}</td>
-                                    <td>
-                                        <i class="fas fa-book text-primary me-2"></i>
-                                        {{ book.titre }}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            {{ book.created_at.strftime('%d/%m/%Y %H:%M') if book.created_at else 'N/A' }}
-                                        </small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle fa-2x mb-3"></i>
-                <h4>Aucun livre trouvé</h4>
-                <p>Commencez par ajouter votre premier livre à la collection.</p>
-                <a href="{{ url_for('main.add_book') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Ajouter le premier livre
-                </a>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="fas fa-shield-alt text-success"></i> Statut de sécurité
-                </h6>
-                <div class="row">
-                    <div class="col-md-4">
-                        <span class="badge bg-success">
-                            <i class="fas fa-database"></i> Base de données connectée
-                        </span>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="badge bg-warning">
-                            <i class="fas fa-key"></i> Vault: En cours d'intégration
-                        </span>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="badge bg-info">
-                            <i class="fas fa-user-shield"></i> 2FA: À implémenter
-                        </span>
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                            <h6>Authentifié</h6>
+                            <small class="text-muted">Session active</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            {% if totp_verified %}
+                                <div class="mb-2">
+                                    <i class="fas fa-shield-alt fa-2x text-primary"></i>
+                                </div>
+                                <h6>TOTP Vérifié</h6>
+                                <small class="text-muted">2FA active</small>
+                            {% else %}
+                                <div class="mb-2">
+                                    <i class="fas fa-shield fa-2x text-warning"></i>
+                                </div>
+                                <h6>TOTP Optionnel</h6>
+                                <small class="text-muted">Sécurité de base</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-server fa-2x text-info"></i>
+                            </div>
+                            <h6>Vault Intégré</h6>
+                            <small class="text-muted">Secrets sécurisés</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-database fa-2x text-secondary"></i>
+                            </div>
+                            <h6>Base de Données</h6>
+                            <small class="text-muted">MariaDB</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {% else %}
+    <!-- Unauthenticated Landing Page -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <h1 class="display-3 fw-bold text-white mb-4">
+                    <i class="fas fa-shield-alt me-3"></i>TestVault
+                </h1>
+                <p class="lead text-white mb-4">
+                    Plateforme de Sécurité by Design avec Authentification Avancée
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>Créer un compte
+                    </a>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-mobile-alt fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">TOTP 2FA</h5>
+                            <p class="card-text">
+                                Authentification à deux facteurs avec Google Authenticator, 
+                                Microsoft Authenticator ou Authy.
+                            </p>
+                            <span class="badge bg-success">5 points</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-robot fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Captcha Serveur</h5>
+                            <p class="card-text">
+                                Protection contre les bots avec captcha côté serveur 
+                                pour sécuriser les formulaires.
+                            </p>
+                            <span class="badge bg-warning">5 points</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-sync-alt fa-3x text-info mb-3"></i>
+                            <h5 class="card-title">Anti-Replay</h5>
+                            <p class="card-text">
+                                Protection contre les attaques par rejeu avec 
+                                gestion des nonces et timestamps.
+                            </p>
+                            <span class="badge bg-info">2 points</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-vault fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">HashiCorp Vault</h5>
+                            <p class="card-text">
+                                Intégration complète avec Vault pour la gestion 
+                                sécurisée des secrets et credentials.
+                            </p>
+                            <span class="badge bg-success">8 points</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-user-clock fa-3x text-secondary mb-3"></i>
+                            <h5 class="card-title">Comptes Obsolètes</h5>
+                            <p class="card-text">
+                                Stratégie de détection et gestion des comptes 
+                                inactifs pour maintenir la sécurité.
+                            </p>
+                            <span class="badge bg-secondary">Bonus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-code fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Développement Sécurisé</h5>
+                            <p class="card-text">
+                                Architecture Security by Design avec Flask, 
+                                MariaDB et Docker pour un déploiement robuste.
+                            </p>
+                            <span class="badge bg-primary">Architecture</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Info -->
+            <div class="card mt-5 bg-dark text-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="card-title">
+                                <i class="fas fa-graduation-cap me-2"></i>Projet EPSI - Sécurité by Design
+                            </h5>
+                            <p class="card-text mb-0">
+                                Implémentation complète des fonctionnalités de sécurité avancées 
+                                avec HashiCorp Vault, authentification multi-facteurs et protection anti-replay.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="display-6 fw-bold text-success">20/20</div>
+                            <small>Points Objectif</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %} 
