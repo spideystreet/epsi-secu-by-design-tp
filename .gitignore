@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Cursor
+.cursor/
+
+# TODO
+TODO.md
+
 # C extensions
 *.so
 
