@@ -1,0 +1,15 @@
+# Core application dependencies
+Flask==3.0.0
+PyMySQL==1.1.0
+python-dotenv==1.0.1
+
+# Vault integration
+hvac==2.1.0
+
+# Security dependencies (will add Pillow/qrcode later for captcha)
+pyotp==2.9.0
+cryptography==42.0.5
+bcrypt==4.1.2
+
+# Optional: Redis for session storage
+redis==5.0.3 
