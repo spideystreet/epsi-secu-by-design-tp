@@ -1,59 +1,109 @@
 {% extends "base.html" %}
-
 {% block title %}Ajouter un livre - TestVault{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">
-                    <i class="fas fa-plus-circle"></i> Ajouter un nouveau livre
-                </h4>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="titre" class="form-label">
-                            <i class="fas fa-book"></i> Titre du livre *
-                        </label>
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="titre" 
-                            name="titre" 
-                            placeholder="Entrez le titre du livre"
-                            required
-                            maxlength="255"
-                        >
-                        <div class="form-text">
-                            Maximum 255 caractères
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>Ajouter un nouveau livre
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Anti-replay protection tokens -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="request_nonce" value="{{ request_nonce }}">
+                        <input type="hidden" name="submission_id" value="{{ submission_id }}">
+                        
+                        <div class="mb-3">
+                            <label for="titre" class="form-label">Titre du livre</label>
+                            <input type="text" class="form-control" id="titre" name="titre" 
+                                   placeholder="Entrez le titre du livre" required minlength="2" maxlength="255">
+                            <div class="form-text">
+                                Minimum 2 caractères, maximum 255 caractères
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Annuler
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Ajouter le livre
-                        </button>
-                    </div>
-                </form>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-save me-2"></i>Ajouter le livre
+                            </button>
+                            <a href="{{ url_for('main.books') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
-        
-        <div class="card mt-3 bg-light">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="fas fa-lightbulb text-warning"></i> Suggestion
-                </h6>
-                <p class="card-text small mb-0">
-                    Vous pouvez ajouter des livres célèbres comme "Le Comte de Monte-Cristo", 
-                    "Les Trois Mousquetaires", ou "Notre-Dame de Paris".
-                </p>
+            
+            <!-- Help Card -->
+            <div class="card mt-3 border-info">
+                <div class="card-body p-3">
+                    <h6 class="card-title text-info">
+                        <i class="fas fa-info-circle me-2"></i>Informations
+                    </h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-shield-alt text-success me-2"></i>Formulaire protégé contre les attaques par rejeu</li>
+                        <li><i class="fas fa-clock text-success me-2"></i>Session sécurisée avec validation temporelle</li>
+                        <li><i class="fas fa-database text-success me-2"></i>Données stockées de manière sécurisée</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const titreInput = document.getElementById('titre');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Auto-focus on title input
+    titreInput.focus();
+    
+    // Real-time validation
+    titreInput.addEventListener('input', function() {
+        const value = this.value.trim();
+        if (value.length < 2) {
+            this.classList.add('is-invalid');
+            this.classList.remove('is-valid');
+            submitBtn.disabled = true;
+        } else {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+            submitBtn.disabled = false;
+        }
+    });
+    
+    // Prevent double submission
+    let formSubmitted = false;
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (formSubmitted) {
+            e.preventDefault();
+            return false;
+        }
+        
+        const titre = titreInput.value.trim();
+        if (titre.length < 2) {
+            e.preventDefault();
+            titreInput.focus();
+            return false;
+        }
+        
+        formSubmitted = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Ajout en cours...';
+        
+        // Re-enable after 3 seconds as safety net
+        setTimeout(() => {
+            formSubmitted = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Ajouter le livre';
+        }, 3000);
+    });
+});
+</script>
 {% endblock %} 

@@ -8,26 +8,30 @@
             <div class="card shadow">
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
-                        <h2 class="card-title mb-3">🔐 Authentification à 2 facteurs</h2>
-                        <p class="text-muted">Entrez votre code d'authentification</p>
+                        <h2 class="card-title mb-3">�� Authentification à deux facteurs</h2>
+                        <p class="text-muted">Saisissez votre code TOTP pour accéder à votre compte</p>
                     </div>
 
-                    <!-- TOTP Form -->
-                    <form method="POST" id="totpForm">
+                    <form method="POST">
+                        <!-- Anti-replay protection tokens -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="request_nonce" value="{{ request_nonce }}">
+                        <input type="hidden" name="submission_id" value="{{ submission_id }}">
+                        
                         <div class="mb-3">
                             <label for="token" class="form-label">Code TOTP</label>
-                            <input type="text" class="form-control form-control-lg text-center" 
-                                   id="token" name="token" placeholder="000000" 
-                                   maxlength="6" pattern="[0-9]{6}" required 
-                                   style="font-family: monospace; letter-spacing: 0.2em;">
-                            <div class="form-text text-center">
-                                Saisissez le code à 6 chiffres de votre application d'authentification
+                            <input type="text" class="form-control text-center" id="token" name="token" 
+                                   placeholder="000000" maxlength="6" pattern="[0-9]{6}" 
+                                   style="font-family: monospace; font-size: 1.2em; letter-spacing: 0.2em;"
+                                   autocomplete="one-time-code" inputmode="numeric">
+                            <div class="form-text">
+                                <i class="fas fa-mobile-alt me-1"></i>Utilisez votre application d'authentification
                             </div>
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-shield-alt me-2"></i>Vérifier
+                            <button type="submit" class="btn btn-primary btn-lg" id="verifyBtn">
+                                <i class="fas fa-check me-2"></i>Vérifier
                             </button>
                         </div>
                     </form>
@@ -36,62 +40,52 @@
 
                     <!-- Backup Code Section -->
                     <div class="text-center">
-                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" 
-                                data-bs-target="#backupCodeSection" aria-expanded="false">
-                            <i class="fas fa-key me-2"></i>Utiliser un code de sauvegarde
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleBackupCode()">
+                            <i class="fas fa-key me-1"></i>Utiliser un code de sauvegarde
                         </button>
                     </div>
 
-                    <div class="collapse mt-3" id="backupCodeSection">
-                        <div class="card card-body bg-light">
-                            <form method="POST">
-                                <div class="mb-3">
-                                    <label for="backup_code" class="form-label">Code de sauvegarde</label>
-                                    <input type="text" class="form-control text-center" 
-                                           id="backup_code" name="backup_code" placeholder="0000-0000" 
-                                           style="font-family: monospace;">
-                                    <div class="form-text text-center">
-                                        Format: 0000-0000 (8 chiffres avec tiret)
-                                    </div>
-                                </div>
-                                
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-warning">
-                                        <i class="fas fa-unlock me-2"></i>Utiliser le code de sauvegarde
-                                    </button>
-                                </div>
-                            </form>
+                    <div id="backupCodeSection" style="display: none;">
+                        <hr class="my-3">
+                        <form method="POST">
+                            <!-- Anti-replay protection tokens -->
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="request_nonce" value="{{ request_nonce }}">
+                            <input type="hidden" name="submission_id" value="{{ submission_id }}">
                             
-                            <div class="alert alert-warning mt-3 mb-0">
-                                <small>
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Attention:</strong> Chaque code de sauvegarde ne peut être utilisé qu'une seule fois.
-                                </small>
+                            <div class="mb-3">
+                                <label for="backup_code" class="form-label">Code de sauvegarde</label>
+                                <input type="text" class="form-control text-center" id="backup_code" name="backup_code" 
+                                       placeholder="XXXXXXXX" maxlength="8" 
+                                       style="font-family: monospace; font-size: 1.1em; letter-spacing: 0.1em;"
+                                       autocomplete="off">
+                                <div class="form-text">
+                                    <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                    Code à usage unique
+                                </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="text-center">
-                        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
-                            <i class="fas fa-sign-out-alt me-2"></i>Se déconnecter
-                        </a>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning" id="backupBtn">
+                                    <i class="fas fa-unlock me-2"></i>Utiliser le code de sauvegarde
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Help Section -->
+            <!-- Help Card -->
             <div class="card mt-3 border-info">
                 <div class="card-body p-3">
                     <h6 class="card-title text-info">
                         <i class="fas fa-question-circle me-2"></i>Besoin d'aide?
                     </h6>
                     <ul class="list-unstyled mb-0 small">
-                        <li><i class="fas fa-mobile-alt text-muted me-2"></i>Ouvrez votre application d'authentification</li>
-                        <li><i class="fas fa-search text-muted me-2"></i>Trouvez l'entrée "TestVault"</li>
-                        <li><i class="fas fa-clipboard text-muted me-2"></i>Copiez le code à 6 chiffres</li>
-                        <li><i class="fas fa-clock text-muted me-2"></i>Le code change toutes les 30 secondes</li>
+                        <li><i class="fas fa-mobile-alt text-primary me-2"></i>Ouvrez votre app d'authentification</li>
+                        <li><i class="fas fa-search text-primary me-2"></i>Trouvez "TestVault" ou votre compte</li>
+                        <li><i class="fas fa-keyboard text-primary me-2"></i>Saisissez le code à 6 chiffres</li>
+                        <li><i class="fas fa-clock text-primary me-2"></i>Le code change toutes les 30 secondes</li>
                     </ul>
                 </div>
             </div>
@@ -103,38 +97,85 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tokenInput = document.getElementById('token');
     const backupCodeInput = document.getElementById('backup_code');
-
-    // Auto-focus and format TOTP input
-    tokenInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 6) {
-            value = value.substring(0, 6);
-        }
-        e.target.value = value;
-        
-        // Auto-submit when 6 digits are entered
-        if (value.length === 6) {
-            document.getElementById('totpForm').submit();
-        }
-    });
-
-    // Format backup code input
-    backupCodeInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 8) {
-            value = value.substring(0, 8);
-        }
-        
-        // Add dash after 4 digits
-        if (value.length > 4) {
-            value = value.substring(0, 4) + '-' + value.substring(4);
-        }
-        
-        e.target.value = value;
-    });
-
-    // Auto-focus token input
+    
+    // Auto-focus on token input
     tokenInput.focus();
+    
+    // Auto-format token input (numbers only)
+    tokenInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.replace(/\D/g, '');
+        
+        // Auto-submit when 6 digits entered
+        if (e.target.value.length === 6) {
+            document.getElementById('verifyBtn').click();
+        }
+    });
+    
+    // Auto-format backup code input (uppercase)
+    backupCodeInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+    
+    // Prevent double submission
+    let formSubmitted = false;
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (formSubmitted) {
+                e.preventDefault();
+                return false;
+            }
+            formSubmitted = true;
+            
+            // Disable submit buttons
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Vérification...';
+                
+                // Re-enable after 3 seconds as safety net
+                setTimeout(() => {
+                    formSubmitted = false;
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }, 3000);
+            }
+        });
+    });
 });
+
+function toggleBackupCode() {
+    const section = document.getElementById('backupCodeSection');
+    const isHidden = section.style.display === 'none';
+    
+    section.style.display = isHidden ? 'block' : 'none';
+    
+    if (isHidden) {
+        document.getElementById('backup_code').focus();
+    } else {
+        document.getElementById('token').focus();
+    }
+}
+
+// Auto-refresh countdown (visual feedback)
+let countdown = 30;
+function updateCountdown() {
+    const tokenInput = document.getElementById('token');
+    if (tokenInput && tokenInput.placeholder === '000000') {
+        countdown--;
+        if (countdown <= 0) {
+            countdown = 30;
+            // Visual indication that code refreshed
+            tokenInput.style.backgroundColor = '#e3f2fd';
+            setTimeout(() => {
+                tokenInput.style.backgroundColor = '';
+            }, 1000);
+        }
+    }
+}
+
+// Start countdown
+setInterval(updateCountdown, 1000);
 </script>
 {% endblock %} 

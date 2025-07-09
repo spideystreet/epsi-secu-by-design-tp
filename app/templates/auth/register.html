@@ -13,6 +13,11 @@
                     </div>
 
                     <form method="POST" id="registerForm">
+                        <!-- Anti-replay protection tokens -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="request_nonce" value="{{ request_nonce }}">
+                        <input type="hidden" name="submission_id" value="{{ submission_id }}">
+                        
                         <div class="mb-3">
                             <label for="username" class="form-label">Nom d'utilisateur</label>
                             <input type="text" class="form-control" id="username" name="username" 
@@ -91,7 +96,7 @@
                 </div>
             </div>
 
-            <!-- Password Requirements -->
+            <!-- Security Features -->
             <div class="card mt-3 border-warning">
                 <div class="card-body p-3">
                     <h6 class="card-title text-warning">
@@ -101,7 +106,8 @@
                         <li><i class="fas fa-check text-muted me-2"></i>Au moins 6 caractères</li>
                         <li><i class="fas fa-check text-muted me-2"></i>Vérification captcha obligatoire</li>
                         <li><i class="fas fa-check text-muted me-2"></i>Protection contre les bots</li>
-                        <li><i class="fas fa-check text-muted me-2"></i>Limitation de tentatives</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Protection anti-rejeu</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Validation temporelle</li>
                     </ul>
                 </div>
             </div>
@@ -200,6 +206,25 @@ document.addEventListener('DOMContentLoaded', function() {
             timeout = setTimeout(later, wait);
         };
     }
+    
+    // Prevent double submission
+    let formSubmitted = false;
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        if (formSubmitted) {
+            e.preventDefault();
+            return false;
+        }
+        formSubmitted = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+        
+        // Re-enable after 5 seconds as safety net
+        setTimeout(() => {
+            formSubmitted = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Créer le compte';
+        }, 5000);
+    });
 });
 
 function refreshCaptcha() {
