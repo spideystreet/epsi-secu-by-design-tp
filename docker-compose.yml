@@ -11,7 +11,7 @@ services:
       MYSQL_USER: testvault
       MYSQL_PASSWORD: initialpass123
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
