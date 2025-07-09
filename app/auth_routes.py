@@ -3,20 +3,36 @@ Authentication routes for login, registration, and TOTP
 """
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from app.auth import AuthService, TOTPService, create_session, destroy_session, require_auth
+from app.captcha import captcha_service, require_captcha, detect_bot_behavior, mark_form_start, check_rate_limit, ensure_rate_limits_table
 import logging
 
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+# Ensure rate limits table exists
+ensure_rate_limits_table()
+
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@require_captcha
 def register():
-    """User registration."""
+    """User registration with captcha protection."""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        
+        # Check for bot behavior
+        if detect_bot_behavior(request):
+            flash('Activité suspecte détectée. Veuillez réessayer plus tard.', 'error')
+            return render_template('auth/register.html')
+        
+        # Check rate limiting
+        identifier = request.remote_addr
+        if not check_rate_limit(identifier, max_attempts=3, window_minutes=60):
+            flash('Trop de tentatives d\'inscription. Veuillez attendre avant de réessayer.', 'error')
+            return render_template('auth/register.html')
         
         # Validation
         if not username or not email or not password:
@@ -43,14 +59,31 @@ def register():
         else:
             flash('Erreur lors de la création du compte. L\'utilisateur existe peut-être déjà.', 'error')
     
-    return render_template('auth/register.html')
+    # Generate captcha for GET request or failed POST
+    if request.method == 'GET':
+        mark_form_start()
+    
+    captcha_text, captcha_image = captcha_service.generate_captcha()
+    return render_template('auth/register.html', captcha_image=captcha_image)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@require_captcha
 def login():
-    """User login."""
+    """User login with captcha protection."""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
+        
+        # Check for bot behavior
+        if detect_bot_behavior(request):
+            flash('Activité suspecte détectée. Veuillez réessayer plus tard.', 'error')
+            return render_template('auth/login.html')
+        
+        # Check rate limiting
+        identifier = f"login_{request.remote_addr}"
+        if not check_rate_limit(identifier, max_attempts=5, window_minutes=15):
+            flash('Trop de tentatives de connexion. Veuillez attendre avant de réessayer.', 'error')
+            return render_template('auth/login.html')
         
         if not username or not password:
             flash('Nom d\'utilisateur et mot de passe requis.', 'error')
@@ -76,7 +109,12 @@ def login():
         else:
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'error')
     
-    return render_template('auth/login.html')
+    # Generate captcha for GET request or failed POST
+    if request.method == 'GET':
+        mark_form_start()
+    
+    captcha_text, captcha_image = captcha_service.generate_captcha()
+    return render_template('auth/login.html', captcha_image=captcha_image)
 
 @auth_bp.route('/totp/verify', methods=['GET', 'POST'])
 @require_auth
@@ -90,6 +128,12 @@ def totp_verify():
         backup_code = request.form.get('backup_code', '').strip()
         
         user_id = session.get('user_id')
+        
+        # Check rate limiting for TOTP attempts
+        identifier = f"totp_{user_id}"
+        if not check_rate_limit(identifier, max_attempts=10, window_minutes=15):
+            flash('Trop de tentatives TOTP. Veuillez attendre avant de réessayer.', 'error')
+            return render_template('auth/totp_verify.html')
         
         if token:
             # Verify TOTP token
@@ -224,4 +268,48 @@ def totp_status():
                 
     except Exception as e:
         logger.error(f"TOTP status error: {e}")
-        return jsonify({'error': 'Server error'}), 500 
+        return jsonify({'error': 'Server error'}), 500
+
+# Captcha API endpoints
+@auth_bp.route('/api/captcha/refresh')
+def refresh_captcha():
+    """Refresh captcha image."""
+    try:
+        captcha_text, captcha_image = captcha_service.refresh_captcha()
+        return jsonify({
+            'success': True,
+            'captcha_image': captcha_image
+        })
+    except Exception as e:
+        logger.error(f"Captcha refresh error: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to generate new captcha'
+        }), 500
+
+@auth_bp.route('/api/captcha/validate', methods=['POST'])
+def validate_captcha_api():
+    """Validate captcha via API."""
+    try:
+        data = request.get_json()
+        user_input = data.get('captcha', '').strip() if data else ''
+        
+        if not user_input:
+            return jsonify({
+                'valid': False,
+                'message': 'Code captcha requis'
+            })
+        
+        is_valid = captcha_service.validate_captcha(user_input)
+        
+        return jsonify({
+            'valid': is_valid,
+            'message': 'Code captcha valide' if is_valid else 'Code captcha incorrect'
+        })
+        
+    except Exception as e:
+        logger.error(f"Captcha validation API error: {e}")
+        return jsonify({
+            'valid': False,
+            'message': 'Erreur de validation'
+        }), 500 

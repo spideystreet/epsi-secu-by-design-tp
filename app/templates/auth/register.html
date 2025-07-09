@@ -44,6 +44,35 @@
                             <div class="form-text" id="passwordMatch"></div>
                         </div>
 
+                        <!-- Captcha Section -->
+                        <div class="mb-3">
+                            <label for="captcha" class="form-label">Code de vérification</label>
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="border rounded p-2 mb-2 text-center bg-light" style="height: 80px; display: flex; align-items: center; justify-content: center;">
+                                        <div id="captchaContainer">
+                                            {% if captcha_image.startswith('data:image') %}
+                                                <img id="captchaImage" src="{{ captcha_image }}" alt="Captcha" style="max-height: 60px; max-width: 100%;">
+                                            {% else %}
+                                                <div id="captchaHtml">{{ captcha_image|safe }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4 d-flex align-items-center">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="refreshCaptcha()" title="Nouveau captcha">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="text" class="form-control" id="captcha" name="captcha" 
+                                   placeholder="Saisissez le code ci-dessus" required maxlength="10" 
+                                   style="text-transform: uppercase;">
+                            <div class="form-text">
+                                <small><i class="fas fa-robot me-1"></i>Protection anti-bot - Saisissez les caractères visibles</small>
+                            </div>
+                        </div>
+
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
                                 <i class="fas fa-user-plus me-2"></i>Créer le compte
@@ -66,12 +95,13 @@
             <div class="card mt-3 border-warning">
                 <div class="card-body p-3">
                     <h6 class="card-title text-warning">
-                        <i class="fas fa-info-circle me-2"></i>Recommandations de sécurité
+                        <i class="fas fa-info-circle me-2"></i>Sécurité renforcée
                     </h6>
                     <ul class="list-unstyled mb-0 small">
                         <li><i class="fas fa-check text-muted me-2"></i>Au moins 6 caractères</li>
-                        <li><i class="fas fa-check text-muted me-2"></i>Mélange de lettres et chiffres</li>
-                        <li><i class="fas fa-check text-muted me-2"></i>Évitez les mots de passe courants</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Vérification captcha obligatoire</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Protection contre les bots</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Limitation de tentatives</li>
                     </ul>
                 </div>
             </div>
@@ -84,12 +114,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirm_password');
+    const captchaInput = document.getElementById('captcha');
     const usernameStatus = document.getElementById('usernameStatus');
     const passwordMatch = document.getElementById('passwordMatch');
     const submitBtn = document.getElementById('submitBtn');
 
     let usernameValid = false;
     let passwordsMatch = false;
+    let captchaValid = false;
 
     // Check username availability
     usernameInput.addEventListener('input', debounce(function() {
@@ -141,8 +173,16 @@ document.addEventListener('DOMContentLoaded', function() {
     passwordInput.addEventListener('input', checkPasswordMatch);
     confirmPasswordInput.addEventListener('input', checkPasswordMatch);
 
+    // Auto-uppercase captcha input
+    captchaInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+        // Simple validation - just check if something is entered
+        captchaValid = e.target.value.length >= 3;
+        updateSubmitButton();
+    });
+
     function updateSubmitButton() {
-        if (usernameValid && passwordsMatch && passwordInput.value.length >= 6) {
+        if (usernameValid && passwordsMatch && passwordInput.value.length >= 6 && captchaValid) {
             submitBtn.disabled = false;
         } else {
             submitBtn.disabled = true;
@@ -161,5 +201,43 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
+
+function refreshCaptcha() {
+    const captchaContainer = document.getElementById('captchaContainer');
+    const refreshBtn = document.querySelector('button[onclick="refreshCaptcha()"]');
+    
+    // Show loading
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    refreshBtn.disabled = true;
+    
+    fetch('/auth/api/captcha/refresh')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update captcha display
+                if (data.captcha_image.startsWith('data:image')) {
+                    // Image-based captcha
+                    captchaContainer.innerHTML = `<img id="captchaImage" src="${data.captcha_image}" alt="Captcha" style="max-height: 60px; max-width: 100%;">`;
+                } else {
+                    // HTML-based captcha
+                    captchaContainer.innerHTML = `<div id="captchaHtml">${data.captcha_image}</div>`;
+                }
+                document.getElementById('captcha').value = '';
+                // Reset captcha validation
+                captchaValid = false;
+                updateSubmitButton();
+            } else {
+                alert('Erreur lors du rafraîchissement du captcha');
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing captcha:', error);
+            alert('Erreur de connexion');
+        })
+        .finally(() => {
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            refreshBtn.disabled = false;
+        });
+}
 </script>
 {% endblock %} 

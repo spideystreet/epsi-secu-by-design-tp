@@ -5,14 +5,22 @@ import random
 import string
 import secrets
 import logging
-from io import BytesIO
 import base64
 from datetime import datetime, timedelta
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from flask import session
 from typing import Optional, Tuple
+import html
 
 logger = logging.getLogger(__name__)
+
+# Try to import PIL, if not available use text fallback
+try:
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    from io import BytesIO
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    logger.warning("PIL (Pillow) not available. Using text-based captcha fallback.")
 
 class CaptchaService:
     """Handles server-side captcha generation and validation."""
@@ -30,7 +38,14 @@ class CaptchaService:
         return ''.join(random.choices(self.characters, k=self.char_count))
     
     def create_captcha_image(self, text: str) -> str:
-        """Create captcha image and return as base64 string."""
+        """Create captcha image and return as base64 string or HTML."""
+        if PIL_AVAILABLE:
+            return self._create_pil_captcha(text)
+        else:
+            return self._create_text_captcha(text)
+    
+    def _create_pil_captcha(self, text: str) -> str:
+        """Create captcha image using PIL."""
         try:
             # Create image
             image = Image.new('RGB', (self.width, self.height), color='white')
@@ -117,33 +132,103 @@ class CaptchaService:
             return f"data:image/png;base64,{img_str}"
             
         except Exception as e:
-            logger.error(f"Error creating captcha image: {e}")
-            # Return a simple text-based fallback
-            return self._create_simple_captcha(text)
+            logger.error(f"Error creating PIL captcha image: {e}")
+            # Fallback to text captcha
+            return self._create_text_captcha(text)
     
-    def _create_simple_captcha(self, text: str) -> str:
-        """Create a simple text-based captcha as fallback."""
-        # Create a simple colored background with text
-        image = Image.new('RGB', (self.width, self.height), color=(240, 240, 240))
-        draw = ImageDraw.Draw(image)
+    def _create_text_captcha(self, text: str) -> str:
+        """Create a text-based captcha as fallback when PIL is not available."""
+        # Create stylized text display with HTML/CSS
+        styled_chars = []
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
         
-        # Draw text in center
-        font = ImageFont.load_default()
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        for i, char in enumerate(text):
+            color = random.choice(colors)
+            # Random transformations
+            rotation = random.randint(-15, 15)
+            size = random.randint(20, 30)
+            x_offset = random.randint(-5, 5)
+            y_offset = random.randint(-10, 10)
+            
+            styled_char = f'''
+                <span style="
+                    color: {color};
+                    font-size: {size}px;
+                    font-weight: bold;
+                    display: inline-block;
+                    transform: rotate({rotation}deg) translate({x_offset}px, {y_offset}px);
+                    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+                    margin: 0 2px;
+                    font-family: 'Courier New', monospace;
+                ">{html.escape(char)}</span>
+            '''
+            styled_chars.append(styled_char)
         
-        x = (self.width - text_width) // 2
-        y = (self.height - text_height) // 2
+        # Create noise characters
+        noise_chars = []
+        for _ in range(random.randint(3, 6)):
+            noise_char = random.choice('!@#$%&*+-=?')
+            color = '#E0E0E0'
+            rotation = random.randint(-30, 30)
+            size = random.randint(12, 18)
+            x_pos = random.randint(10, 90)
+            y_pos = random.randint(10, 90)
+            
+            noise_chars.append(f'''
+                <span style="
+                    color: {color};
+                    font-size: {size}px;
+                    position: absolute;
+                    left: {x_pos}%;
+                    top: {y_pos}%;
+                    transform: rotate({rotation}deg);
+                    opacity: 0.3;
+                ">{html.escape(noise_char)}</span>
+            ''')
         
-        draw.text((x, y), text, font=font, fill=(0, 0, 0))
+        # Combine everything
+        captcha_html = f'''
+            <div style="
+                width: {self.width}px;
+                height: {self.height}px;
+                background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+                border: 2px solid #ccc;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+                margin: 0 auto;
+            ">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    z-index: 2;
+                    position: relative;
+                ">
+                    {''.join(styled_chars)}
+                </div>
+                {''.join(noise_chars)}
+                <div style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: repeating-linear-gradient(
+                        90deg,
+                        transparent,
+                        transparent 2px,
+                        rgba(255,255,255,0.1) 2px,
+                        rgba(255,255,255,0.1) 4px
+                    );
+                    z-index: 1;
+                "></div>
+            </div>
+        '''
         
-        # Convert to base64
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
-        
-        return f"data:image/png;base64,{img_str}"
+        return captcha_html
     
     def generate_captcha(self) -> Tuple[str, str]:
         """Generate captcha text and image, store in session."""
@@ -273,7 +358,7 @@ def check_rate_limit(identifier: str, max_attempts: int = 5, window_minutes: int
         
         if not db_manager.connection:
             if not db_manager.connect():
-                return False  # Allow if can't check
+                return True  # Allow if can't check
         
         current_time = datetime.now()
         window_start = current_time - timedelta(minutes=window_minutes)
