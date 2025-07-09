@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Inscription - TestVault{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100 justify-content-center align-items-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="card-title mb-3">👤 Inscription</h2>
+                        <p class="text-muted">Créez votre compte TestVault</p>
+                    </div>
+
+                    <form method="POST" id="registerForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   placeholder="Choisissez un nom d'utilisateur" required autocomplete="username">
+                            <div class="form-text" id="usernameHelp">
+                                <span id="usernameStatus"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="votre@email.com" required autocomplete="email">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="Choisissez un mot de passe sécurisé" required autocomplete="new-password">
+                            <div class="form-text">
+                                Minimum 6 caractères recommandé
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                   placeholder="Confirmez votre mot de passe" required autocomplete="new-password">
+                            <div class="form-text" id="passwordMatch"></div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                                <i class="fas fa-user-plus me-2"></i>Créer le compte
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-0">Déjà un compte?</p>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Password Requirements -->
+            <div class="card mt-3 border-warning">
+                <div class="card-body p-3">
+                    <h6 class="card-title text-warning">
+                        <i class="fas fa-info-circle me-2"></i>Recommandations de sécurité
+                    </h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-check text-muted me-2"></i>Au moins 6 caractères</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Mélange de lettres et chiffres</li>
+                        <li><i class="fas fa-check text-muted me-2"></i>Évitez les mots de passe courants</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const usernameStatus = document.getElementById('usernameStatus');
+    const passwordMatch = document.getElementById('passwordMatch');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let usernameValid = false;
+    let passwordsMatch = false;
+
+    // Check username availability
+    usernameInput.addEventListener('input', debounce(function() {
+        const username = this.value.trim();
+        if (username.length < 3) {
+            usernameStatus.innerHTML = '<span class="text-warning">Trop court</span>';
+            usernameValid = false;
+            updateSubmitButton();
+            return;
+        }
+
+        fetch(`/auth/api/check-username?username=${encodeURIComponent(username)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.available) {
+                    usernameStatus.innerHTML = '<span class="text-success">✓ Disponible</span>';
+                    usernameValid = true;
+                } else {
+                    usernameStatus.innerHTML = `<span class="text-danger">✗ ${data.message}</span>`;
+                    usernameValid = false;
+                }
+                updateSubmitButton();
+            })
+            .catch(() => {
+                usernameStatus.innerHTML = '<span class="text-muted">Vérification impossible</span>';
+                usernameValid = true; // Allow submission if check fails
+                updateSubmitButton();
+            });
+    }, 500));
+
+    // Check password match
+    function checkPasswordMatch() {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        
+        if (confirmPassword === '') {
+            passwordMatch.innerHTML = '';
+            passwordsMatch = false;
+        } else if (password === confirmPassword) {
+            passwordMatch.innerHTML = '<span class="text-success">✓ Les mots de passe correspondent</span>';
+            passwordsMatch = true;
+        } else {
+            passwordMatch.innerHTML = '<span class="text-danger">✗ Les mots de passe ne correspondent pas</span>';
+            passwordsMatch = false;
+        }
+        updateSubmitButton();
+    }
+
+    passwordInput.addEventListener('input', checkPasswordMatch);
+    confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+
+    function updateSubmitButton() {
+        if (usernameValid && passwordsMatch && passwordInput.value.length >= 6) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Configuration TOTP - TestVault{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Configuration TOTP (Authentification à 2 facteurs)
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    {% if not totp_data %}
+                    <!-- Step 1: Generate TOTP setup -->
+                    <div class="text-center">
+                        <h4 class="mb-3">Étape 1: Générer la configuration</h4>
+                        <p class="text-muted mb-4">
+                            L'authentification à deux facteurs ajoute une couche de sécurité supplémentaire à votre compte.
+                        </p>
+                        
+                        <form method="POST">
+                            <input type="hidden" name="action" value="generate">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-qrcode me-2"></i>Générer le code QR
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Step 2: Scan QR code and verify -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4 class="mb-3">Étape 2: Scanner le code QR</h4>
+                            <p class="small text-muted mb-3">
+                                Utilisez une application d'authentification comme:
+                            </p>
+                            <ul class="list-unstyled small mb-3">
+                                <li><i class="fab fa-google text-primary me-2"></i>Google Authenticator</li>
+                                <li><i class="fab fa-microsoft text-info me-2"></i>Microsoft Authenticator</li>
+                                <li><i class="fas fa-mobile-alt text-success me-2"></i>Authy</li>
+                            </ul>
+                            
+                            <div class="text-center border p-3 rounded bg-light">
+                                <img src="{{ totp_data.qr_code }}" alt="QR Code TOTP" class="img-fluid" style="max-width: 200px;">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h4 class="mb-3">Étape 3: Vérifier</h4>
+                            <p class="small text-muted mb-3">
+                                Entrez le code à 6 chiffres généré par votre application:
+                            </p>
+                            
+                            <form method="POST">
+                                <input type="hidden" name="action" value="verify">
+                                <div class="mb-3">
+                                    <label for="token" class="form-label">Code TOTP</label>
+                                    <input type="text" class="form-control form-control-lg text-center" 
+                                           id="token" name="token" placeholder="000000" 
+                                           maxlength="6" pattern="[0-9]{6}" required 
+                                           style="font-family: monospace; letter-spacing: 0.2em;">
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-check me-2"></i>Activer TOTP
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Backup codes section -->
+                    <hr class="my-4">
+                    
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Codes de sauvegarde
+                        </h5>
+                        <p class="mb-2">
+                            Sauvegardez ces codes de récupération dans un endroit sûr. 
+                            Chaque code ne peut être utilisé qu'une seule fois.
+                        </p>
+                        
+                        <div class="row">
+                            {% for code in totp_data.backup_codes %}
+                            <div class="col-md-6 mb-2">
+                                <code class="bg-light p-2 d-block text-center border rounded">{{ code }}</code>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary btn-sm" onclick="downloadBackupCodes()">
+                                <i class="fas fa-download me-2"></i>Télécharger les codes
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="printBackupCodes()">
+                                <i class="fas fa-print me-2"></i>Imprimer les codes
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour à l'accueil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if totp_data %}
+<script>
+function downloadBackupCodes() {
+    const codes = {{ totp_data.backup_codes | tojson }};
+    const content = "Codes de sauvegarde TOTP - TestVault\n" +
+                    "====================================\n\n" +
+                    codes.join('\n') + "\n\n" +
+                    "IMPORTANT:\n" +
+                    "- Conservez ces codes dans un endroit sûr\n" +
+                    "- Chaque code ne peut être utilisé qu'une fois\n" +
+                    "- Utilisez-les si vous perdez l'accès à votre application d'authentification\n";
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'backup-codes-totp.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function printBackupCodes() {
+    const codes = {{ totp_data.backup_codes | tojson }};
+    const printContent = `
+        <html>
+        <head>
+            <title>Codes de sauvegarde TOTP</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .codes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+                .code { font-family: monospace; font-size: 16px; padding: 10px; border: 1px solid #ccc; text-align: center; }
+                .warning { background: #fff3cd; padding: 15px; margin-top: 20px; border-left: 4px solid #ffc107; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Codes de sauvegarde TOTP</h1>
+                <h2>TestVault - {{ session.username }}</h2>
+            </div>
+            <div class="codes">
+                ${codes.map(code => `<div class="code">${code}</div>`).join('')}
+            </div>
+            <div class="warning">
+                <strong>IMPORTANT:</strong><br>
+                • Conservez ces codes dans un endroit sûr<br>
+                • Chaque code ne peut être utilisé qu'une fois<br>
+                • Utilisez-les si vous perdez l'accès à votre application d'authentification
+            </div>
+        </body>
+        </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Auto-focus and format TOTP input
+document.getElementById('token').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 6) {
+        value = value.substring(0, 6);
+    }
+    e.target.value = value;
+});
+</script>
+{% endif %}
+{% endblock %} 

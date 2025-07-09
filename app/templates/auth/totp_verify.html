@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Vérification TOTP - TestVault{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100 justify-content-center align-items-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="card-title mb-3">🔐 Authentification à 2 facteurs</h2>
+                        <p class="text-muted">Entrez votre code d'authentification</p>
+                    </div>
+
+                    <!-- TOTP Form -->
+                    <form method="POST" id="totpForm">
+                        <div class="mb-3">
+                            <label for="token" class="form-label">Code TOTP</label>
+                            <input type="text" class="form-control form-control-lg text-center" 
+                                   id="token" name="token" placeholder="000000" 
+                                   maxlength="6" pattern="[0-9]{6}" required 
+                                   style="font-family: monospace; letter-spacing: 0.2em;">
+                            <div class="form-text text-center">
+                                Saisissez le code à 6 chiffres de votre application d'authentification
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shield-alt me-2"></i>Vérifier
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <!-- Backup Code Section -->
+                    <div class="text-center">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#backupCodeSection" aria-expanded="false">
+                            <i class="fas fa-key me-2"></i>Utiliser un code de sauvegarde
+                        </button>
+                    </div>
+
+                    <div class="collapse mt-3" id="backupCodeSection">
+                        <div class="card card-body bg-light">
+                            <form method="POST">
+                                <div class="mb-3">
+                                    <label for="backup_code" class="form-label">Code de sauvegarde</label>
+                                    <input type="text" class="form-control text-center" 
+                                           id="backup_code" name="backup_code" placeholder="0000-0000" 
+                                           style="font-family: monospace;">
+                                    <div class="form-text text-center">
+                                        Format: 0000-0000 (8 chiffres avec tiret)
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-unlock me-2"></i>Utiliser le code de sauvegarde
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <small>
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Attention:</strong> Chaque code de sauvegarde ne peut être utilisé qu'une seule fois.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-sign-out-alt me-2"></i>Se déconnecter
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-3 border-info">
+                <div class="card-body p-3">
+                    <h6 class="card-title text-info">
+                        <i class="fas fa-question-circle me-2"></i>Besoin d'aide?
+                    </h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-mobile-alt text-muted me-2"></i>Ouvrez votre application d'authentification</li>
+                        <li><i class="fas fa-search text-muted me-2"></i>Trouvez l'entrée "TestVault"</li>
+                        <li><i class="fas fa-clipboard text-muted me-2"></i>Copiez le code à 6 chiffres</li>
+                        <li><i class="fas fa-clock text-muted me-2"></i>Le code change toutes les 30 secondes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tokenInput = document.getElementById('token');
+    const backupCodeInput = document.getElementById('backup_code');
+
+    // Auto-focus and format TOTP input
+    tokenInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 6) {
+            value = value.substring(0, 6);
+        }
+        e.target.value = value;
+        
+        // Auto-submit when 6 digits are entered
+        if (value.length === 6) {
+            document.getElementById('totpForm').submit();
+        }
+    });
+
+    // Format backup code input
+    backupCodeInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 8) {
+            value = value.substring(0, 8);
+        }
+        
+        // Add dash after 4 digits
+        if (value.length > 4) {
+            value = value.substring(0, 4) + '-' + value.substring(4);
+        }
+        
+        e.target.value = value;
+    });
+
+    // Auto-focus token input
+    tokenInput.focus();
+});
+</script>
+{% endblock %} 

@@ -6,10 +6,12 @@ python-dotenv==1.0.1
 # Vault integration
 hvac==2.1.0
 
-# Security dependencies (will add Pillow/qrcode later for captcha)
+# Security dependencies - TOTP and captcha
 pyotp==2.9.0
+qrcode[pil]==7.4.2
 cryptography==42.0.5
 bcrypt==4.1.2
+Flask-Session==0.5.0
 
 # Optional: Redis for session storage
 redis==5.0.3 

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Profil - TestVault{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>Profil Utilisateur
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-info-circle text-primary me-2"></i>Informations du compte</h5>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th>Nom d'utilisateur:</th>
+                                    <td><strong>{{ session.username }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>{{ session.user_email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Statut:</th>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Actif
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-shield-alt text-success me-2"></i>Sécurité</h5>
+                            <div id="securityStatus">
+                                <div class="d-flex justify-content-center">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOTP Management -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-mobile-alt me-2"></i>Authentification à deux facteurs (TOTP)
+                    </h5>
+                </div>
+                <div class="card-body" id="totpManagement">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock me-2"></i>Informations de session
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Statut d'authentification:</strong></p>
+                            <ul class="list-unstyled">
+                                <li>
+                                    {% if session.authenticated %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>Authentifié
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger me-2"></i>Non authentifié
+                                    {% endif %}
+                                </li>
+                                <li>
+                                    {% if session.totp_verified %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>TOTP vérifié
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-warning me-2"></i>TOTP non vérifié
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Actions rapides:</strong></p>
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Se déconnecter
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadTOTPStatus();
+});
+
+function loadTOTPStatus() {
+    fetch('/auth/api/totp/status')
+        .then(response => response.json())
+        .then(data => {
+            updateSecurityStatus(data);
+            updateTOTPManagement(data);
+        })
+        .catch(error => {
+            console.error('Error loading TOTP status:', error);
+            document.getElementById('securityStatus').innerHTML = 
+                '<div class="alert alert-danger">Erreur de chargement</div>';
+            document.getElementById('totpManagement').innerHTML = 
+                '<div class="alert alert-danger">Erreur de chargement</div>';
+        });
+}
+
+function updateSecurityStatus(data) {
+    const securityStatus = document.getElementById('securityStatus');
+    
+    let html = '<table class="table table-borderless">';
+    
+    html += '<tr><th>Authentification:</th><td>';
+    if (data.authenticated) {
+        html += '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Connecté</span>';
+    } else {
+        html += '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Déconnecté</span>';
+    }
+    html += '</td></tr>';
+    
+    html += '<tr><th>TOTP:</th><td>';
+    if (data.totp_enabled) {
+        html += '<span class="badge bg-success"><i class="fas fa-shield-alt me-1"></i>Activé</span>';
+    } else {
+        html += '<span class="badge bg-warning"><i class="fas fa-shield-alt me-1"></i>Désactivé</span>';
+    }
+    html += '</td></tr>';
+    
+    html += '<tr><th>Vérification TOTP:</th><td>';
+    if (data.totp_verified || !data.totp_enabled) {
+        html += '<span class="badge bg-success"><i class="fas fa-check me-1"></i>OK</span>';
+    } else {
+        html += '<span class="badge bg-warning"><i class="fas fa-exclamation me-1"></i>Requis</span>';
+    }
+    html += '</td></tr>';
+    
+    html += '</table>';
+    
+    securityStatus.innerHTML = html;
+}
+
+function updateTOTPManagement(data) {
+    const totpManagement = document.getElementById('totpManagement');
+    
+    let html = '';
+    
+    if (data.totp_enabled) {
+        html = `
+            <div class="alert alert-success">
+                <h6 class="alert-heading">
+                    <i class="fas fa-check-circle me-2"></i>TOTP Activé
+                </h6>
+                <p class="mb-0">
+                    Votre compte est protégé par l'authentification à deux facteurs.
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-muted">
+                    L'authentification à deux facteurs est actuellement activée sur votre compte.
+                    Pour des raisons de sécurité, la désactivation n'est pas disponible via cette interface.
+                </p>
+            </div>
+        `;
+    } else {
+        html = `
+            <div class="alert alert-warning">
+                <h6 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>TOTP Non Configuré
+                </h6>
+                <p class="mb-0">
+                    Renforcez la sécurité de votre compte en activant l'authentification à deux facteurs.
+                </p>
+            </div>
+            <div class="text-center">
+                <a href="${window.location.origin}/auth/totp/setup" class="btn btn-primary">
+                    <i class="fas fa-shield-alt me-2"></i>Configurer TOTP
+                </a>
+            </div>
+        `;
+    }
+    
+    totpManagement.innerHTML = html;
+}
+</script>
+{% endblock %} 
