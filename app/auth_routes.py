@@ -4,6 +4,7 @@ Authentication routes for login, registration, and TOTP
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from app.auth import AuthService, TOTPService, create_session, destroy_session, require_auth
 from app.captcha import captcha_service, require_captcha, detect_bot_behavior, mark_form_start, check_rate_limit, ensure_rate_limits_table
+from app.anti_replay import secure_form, require_csrf
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,10 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 ensure_rate_limits_table()
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@secure_form('user_registration')
 @require_captcha
 def register():
-    """User registration with captcha protection."""
+    """User registration with complete security protection."""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip()
@@ -60,16 +62,14 @@ def register():
             flash('Erreur lors de la création du compte. L\'utilisateur existe peut-être déjà.', 'error')
     
     # Generate captcha for GET request or failed POST
-    if request.method == 'GET':
-        mark_form_start()
-    
     captcha_text, captcha_image = captcha_service.generate_captcha()
     return render_template('auth/register.html', captcha_image=captcha_image)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@secure_form('user_login')
 @require_captcha
 def login():
-    """User login with captcha protection."""
+    """User login with complete security protection."""
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -110,16 +110,14 @@ def login():
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'error')
     
     # Generate captcha for GET request or failed POST
-    if request.method == 'GET':
-        mark_form_start()
-    
     captcha_text, captcha_image = captcha_service.generate_captcha()
     return render_template('auth/login.html', captcha_image=captcha_image)
 
 @auth_bp.route('/totp/verify', methods=['GET', 'POST'])
 @require_auth
+@secure_form('totp_verification')
 def totp_verify():
-    """TOTP token verification."""
+    """TOTP token verification with anti-replay protection."""
     if not session.get('requires_totp'):
         return redirect(url_for('main.index'))
     
@@ -162,8 +160,9 @@ def totp_verify():
 
 @auth_bp.route('/totp/setup', methods=['GET', 'POST'])
 @require_auth
+@secure_form('totp_setup')
 def totp_setup():
-    """TOTP setup for a user."""
+    """TOTP setup for a user with anti-replay protection."""
     user_id = session.get('user_id')
     
     if request.method == 'POST':
