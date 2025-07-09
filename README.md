@@ -2,8 +2,6 @@
 
 A comprehensive Flask application demonstrating enterprise-grade security features including HashiCorp Vault integration, TOTP authentication, captcha protection, and anti-replay mechanisms.
 
-**🎯 Final Score: 20/20 points**
-
 ## 🚀 Quick Start
 
 ```bash
@@ -30,14 +28,14 @@ python run.py
 
 ## 📋 Security Features Overview
 
-### ✅ Implemented Features (20/20 points)
+### ✅ Implemented Features
 
-| Feature | Points | Status | Description |
-|---------|--------|--------|-------------|
-| **HashiCorp Vault Integration** | 8 | ✅ | Secure credential storage and rotation |
-| **TOTP (2FA)** | 5 | ✅ | Time-based One-Time Password authentication |
-| **Server-side Captcha** | 5 | ✅ | Anti-bot protection with image generation |
-| **Anti-replay Protection** | 2 | ✅ | CSRF tokens, nonces, and timing validation |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **HashiCorp Vault Integration** | ✅ | Secure credential storage and rotation |
+| **TOTP (2FA)** | ✅ | Time-based One-Time Password authentication |
+| **Server-side Captcha** | ✅ | Anti-bot protection with image generation |
+| **Anti-replay Protection** | ✅ | CSRF tokens, nonces, and timing validation |
 
 ### 🛡️ Security Layers
 
@@ -448,5 +446,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **🎓 EPSI Security by Design TP Project**  
-**Score: 20/20 points**  
 **All security features implemented and tested**
