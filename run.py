@@ -19,7 +19,7 @@ if __name__ == '__main__':
     
     # Development configuration
     debug_mode = os.getenv('FLASK_ENV') == 'development'
-    port = int(os.getenv('APP_PORT', 5000))
+    port = int(os.getenv('APP_PORT', 8080))
     
     logger.info(f"Starting TestVault application on port {port}")
     logger.info(f"Debug mode: {debug_mode}")
